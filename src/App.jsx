@@ -11,7 +11,7 @@ import StaffPage from "./pages/StaffPage.jsx"
 import Messages from "./pages/Messages.jsx"
 import "react-datepicker/dist/react-datepicker.js"
 import StaffPatients from "./pages/StaffPatients.jsx"
-import StaffStaff from "./pages/Staffstaff.jsx"
+import StaffStaff from "./pages/StaffStaff.jsx"
 import StaffAppointments from "./pages/StaffAppointments.jsx"
 import AuthProvider from "./contexts/AuthContext.jsx"
 import {QueryClient, QueryClientProvider} from "react-query";
