@@ -196,7 +196,7 @@ export default function Register() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
-                {errors.address && <span className="text-red-500 text-sm">{errors.address}</span>}
+                {errors.phone && <span className="text-red-500 text-sm">{errors.phone}</span>}
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="gender">Gender</Label>

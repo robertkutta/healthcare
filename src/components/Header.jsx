@@ -11,7 +11,6 @@ export function Header() {
           <div className="w-[207px]">
             <img src="kcclogo.png" />
           </div>
-          <span className="font-semibold text-lg">Dashboard</span>
         </div>
         {token ?
           <a href="/logout" onClick={logout}>

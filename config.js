@@ -1,2 +1,2 @@
 
-export const apiURL = 'http://localhost:1337'
+export const apiURL = 'https://concise-decker-447916-h8.nw.r.appspot.com'
