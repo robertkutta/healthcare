@@ -1,25 +1,35 @@
 import { useState, useEffect } from "react";
 import { AuthContext } from "./AuthContext";
+import {useNavigate} from "react-router-dom";
+import {useQuery} from "react-query";
+import {fetchUserData} from "@/api/user.js";
 
 // eslint-disable-next-line react/prop-types
 const AuthProvider = ({ children }) => {
-    const [loggedIn, setLoggedIn] = useState(() => {
-        return localStorage.getItem("loggedIn") === "true";
-    });
+    const [token, setToken] = useState(() => sessionStorage.getItem("token"));
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const handleStorageChange = () => {
-            setLoggedIn(localStorage.getItem("loggedIn") === "true");
-        };
+        if (token) {
+            sessionStorage.setItem("token", token);
+        } else {
+            sessionStorage.removeItem("token");
+        }
+    }, [token]);
 
-        window.addEventListener("storage", handleStorageChange);
+    function logout() {
+        setToken(null);
+        sessionStorage.removeItem("token")
+        navigate('/login');
+    }
 
-        return () => {
-            window.removeEventListener("storage", handleStorageChange);
-        };
-    }, []);
+    const userQuery = useQuery({
+        queryKey: ['user'],
+        queryFn: () => fetchUserData(token),
+        enabled: !!token
+    });
 
-    const value = { loggedIn, setLoggedIn };
+    const value = {token, setToken, userQuery, logout};
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

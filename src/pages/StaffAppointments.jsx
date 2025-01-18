@@ -4,233 +4,132 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { format } from 'date-fns'
-import { Search, Home, Clock, Users, UserCog, Settings, HelpCircle, MessageSquare } from 'lucide-react'
-
-// Mock data for patients
-const mockPatients = [
-  { id: 1, name: "David Smith", email: "david@example.com" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com" },
-  { id: 3, name: "Bob Johnson", email: "bob@example.com" },
-]
+import {useAuth} from "@/contexts/AuthContext.js";
+import {useNavigate} from "react-router-dom";
+import {useQuery} from "react-query";
+import {getUsers} from "@/api/user.js";
+import {createAppointment} from "@/api/appointment.js";
+import {StaffNav} from "@/components/StaffNav.jsx";
 
 export default function StaffAppointments() {
   const [date, setDate] = useState(new Date())
   const [selectedDoctor, setSelectedDoctor] = useState("")
+  const [selectedPatient, setSelectedPatient] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
   const [confirmationMessage, setConfirmationMessage] = useState("")
-  const [patientSearch, setPatientSearch] = useState("")
-  const [selectedPatient, setSelectedPatient] = useState(null)
-  const [filteredPatients, setFilteredPatients] = useState([])
-  const [appointmentDetails, setAppointmentDetails] = useState("")
+
+  const {token} = useAuth();
+  const navigate = useNavigate();
+
+  const doctorQuery = useQuery({
+    queryKey: ['doctors'],
+    queryFn: () => getUsers(token),
+  });
+
+  const doctors = doctorQuery.data?.filter(d => d.healthcareRole === 'doctor').map((doctor) => { return { value: doctor.id, label: `Dr. ${doctor.lastName}`} })
+  const patients = doctorQuery.data?.filter(d => d.healthcareRole === 'patient').map((patient) => { return { value: patient.id, label: `${patient.firstName} ${patient.lastName}`} })
+
+  const regularTimes = ["09:00", "10:00", "11:00", "01:00", "02:00", "03:00", "04:00"]
 
   useEffect(() => {
-    if (date && selectedDoctor && selectedTime && selectedPatient) {
+    if (date && selectedDoctor && selectedTime) {
       setConfirmationMessage(
-        `Booking an appointment for ${selectedPatient.name} on ${format(date, 'MMMM d, yyyy')} at ${selectedTime} with ${selectedDoctor}.`
+        `You are booking an appointment for ${format(date, 'MMMM d, yyyy')} at ${selectedTime} with ${doctors.find(d => d.value === selectedDoctor).label}.`
       )
     } else {
       setConfirmationMessage("")
     }
-  }, [date, selectedDoctor, selectedTime, selectedPatient])
+  }, [date, doctors, selectedDoctor, selectedTime])
 
-  useEffect(() => {
-    const filtered = mockPatients.filter(patient =>
-      patient.name.toLowerCase().includes(patientSearch.toLowerCase())
-    )
-    setFilteredPatients(filtered)
-  }, [patientSearch])
-
-  const handleBooking = () => {
-    console.log("Booking appointment for:", { date, selectedDoctor, selectedTime, patient: selectedPatient, details: appointmentDetails })
-    // Here you would typically send this data to your backend
+  const handleBooking = async () => {
     alert("Appointment booked successfully!")
+
+    let newAppointment = {
+      date: date,
+      time: `${selectedTime}:00`,
+      doctor: selectedDoctor,
+      patient: selectedPatient,
+      appointmentStatus: 'Upcoming'
+    };
+
+    await createAppointment(token, newAppointment);
+    navigate('/staffpage');
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50/50">
-      <aside className="w-64 p-6 bg-white border-r">
-        <div className="flex flex-col h-full">
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold">Admin</h2>
-          </div>
-          <nav className="space-y-2">
-            <a 
-              href="/staffpage" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <Home className="w-4 h-4" />
-              Home
-            </a>
-            <a 
-              href="/staffappointments" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg bg-gray-100"
-            >
-              <Clock className="w-4 h-4" />
-              Appointments
-            </a>
-            <a 
-              href="/staffpatients" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <Users className="w-4 h-4" />
-              Patients
-            </a>
-            <a 
-              href="/staffstaff" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <UserCog className="w-4 h-4" />
-              Staff
-            </a>
-          </nav>
-          <nav className="mt-auto pt-6 space-y-2">
-            <a 
-              href="/settings" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </a>
-            <a 
-              href="/feedback" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <MessageSquare className="w-4 h-4" />
-              Feedback
-            </a>
-            <a 
-              href="/help" 
-              className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-            >
-              <HelpCircle className="w-4 h-4" />
-              Help & Docs
-            </a>
-          </nav>
-        </div>
-      </aside>
-
-
+      <StaffNav/>
       <main className="flex-1 p-8">
-        <h1 className="text-3xl font-bold mb-6">Book New Appointment</h1>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Patient</CardTitle>
-                <CardDescription>Search and select a patient for the appointment</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search patients..."
-                      value={patientSearch}
-                      onChange={(e) => setPatientSearch(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                  {patientSearch && (
-                    <ul className="mt-2 space-y-2">
-                      {filteredPatients.map((patient) => (
-                        <li key={patient.id}>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => setSelectedPatient(patient)}
-                          >
-                            {patient.name} - {patient.email}
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {selectedPatient && (
-                    <div className="mt-4 p-4 bg-muted rounded-md">
-                      <h3 className="font-semibold">Selected Patient:</h3>
-                      <p>{selectedPatient.name} - {selectedPatient.email}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Date</CardTitle>
-                <CardDescription>Choose a date for the appointment</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-md border"
-                />
-              </CardContent>
-            </Card>
-          </div>
+        <h1 className="text-3xl font-bold mb-6">Add A New Appointment</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Date</CardTitle>
+              <CardDescription>Choose a date for the appointment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="rounded-md border w-[280px]"
+              />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Appointment Details</CardTitle>
-              <CardDescription>Select the doctor, time, and add details for the appointment</CardDescription>
+              <CardDescription>Select the doctor and time</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doctor">Doctor</Label>
-                  <Select onValueChange={setSelectedDoctor} value={selectedDoctor}>
-                    <SelectTrigger id="doctor">
-                      <SelectValue placeholder="Select a doctor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Dr. Smith">Dr. Smith</SelectItem>
-                      <SelectItem value="Dr. Johnson">Dr. Johnson</SelectItem>
-                      <SelectItem value="Dr. Brown">Dr. Brown</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time</Label>
-                  <Select onValueChange={setSelectedTime} value={selectedTime}>
-                    <SelectTrigger id="time">
-                      <SelectValue placeholder="Select a time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="09:00 AM">09:00 AM</SelectItem>
-                      <SelectItem value="10:00 AM">10:00 AM</SelectItem>
-                      <SelectItem value="11:00 AM">11:00 AM</SelectItem>
-                      <SelectItem value="02:00 PM">02:00 PM</SelectItem>
-                      <SelectItem value="03:00 PM">03:00 PM</SelectItem>
-                      <SelectItem value="04:00 PM">04:00 PM</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="doctor">Doctor</Label>
+                <Select onValueChange={setSelectedDoctor}>
+                  <SelectTrigger id="doctor">
+                    <SelectValue placeholder="Select a doctor"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctors?.map(doctor =>
+                      <SelectItem key={doctor.value} value={doctor.value}>{doctor.label}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="details">Appointment Details</Label>
-                <Textarea
-                  id="details"
-                  placeholder="Enter any additional details or notes for the appointment"
-                  value={appointmentDetails}
-                  onChange={(e) => setAppointmentDetails(e.target.value)}
-                  rows={4}
-                />
+                <Label htmlFor="time">Time</Label>
+                <Select onValueChange={setSelectedTime}>
+                  <SelectTrigger id="time">
+                    <SelectValue placeholder="Select a time"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regularTimes.map(time =>
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="patient">Patient</Label>
+                <Select onValueChange={setSelectedPatient}>
+                  <SelectTrigger id="patient">
+                    <SelectValue placeholder="Select a patient"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {patients?.map(patient =>
+                      <SelectItem key={patient.value} value={patient.value}>{patient.label}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               {confirmationMessage && (
-                <div className="mt-4 p-4 bg-blue-100 text-blue-800 rounded-md" role="alert">
+                <div className="mt-4 p-4 bg-gray-100 text-black rounded-md" role="alert">
                   {confirmationMessage}
                 </div>
               )}
             </CardContent>
             <CardFooter>
-              <Button 
-                className="w-full" 
-                onClick={handleBooking}
-                disabled={!date || !selectedDoctor || !selectedTime || !selectedPatient}
-              >
+              <Button className="w-full" onClick={handleBooking} disabled={!date || !selectedDoctor || !selectedTime}>
                 Book Appointment
               </Button>
             </CardFooter>

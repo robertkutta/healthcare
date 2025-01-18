@@ -4,27 +4,57 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useNavigate } from 'react-router-dom'
+import {useForm} from "react-hook-form";
+import {useAuth} from "@/contexts/AuthContext.js";
+import {useMutation, useQueryClient} from "react-query";
+import {loginAccount} from "@/api/user.js";
 
 export function StaffLogin() {
-    const [ID, setID] = useState("")
-    const [password, setPassword] = useState("")
+    const {register, handleSubmit, formState: {errors}} = useForm();
     const [error, setError] = useState("")
     const navigate = useNavigate()
+    const [disabled, setDisabled] = useState(false)
 
-    const handleLogin = () => {
-        if (!ID || !password) {
-            setError("Both fields are required")
-            return
-        }
+    const { setToken } = useAuth();
+    const queryClient = useQueryClient();
 
-        setError("")
-        
-        // Simulate a successful login and navigate to the staff page
-        // backend for authentication
-        alert("Login successful!")
-        
-        // Navigate to /staffpage after successful login
-        navigate('/staffpage') 
+    const loginMutation = useMutation({
+        mutationKey: ['user'],
+        mutationFn: loginAccount,
+        onSuccess: async (response) => {
+            if (!response) {
+                setError(true);
+                setDisabled(false);
+            } else {
+                if (error) setError(false);
+                setDisabled(false);
+
+                if (!response.user.confirmed) {
+                    setError(true)
+                    return
+                }
+
+                sessionStorage.setItem("token", response.jwt);
+                setToken(response.jwt);
+
+                await queryClient.invalidateQueries({queryKey: ['user']});
+
+                navigate('/staffpage');
+            }
+        },
+        onError: () => {
+            setError(true);
+            setDisabled(false);
+        },
+    });
+
+    function handleLogin(data) {
+        setDisabled(true);
+        const { id, password } = data;
+
+        console.log(data)
+
+        loginMutation.mutate({ identifier: id, password });
     }
 
     return (
@@ -35,15 +65,15 @@ export function StaffLogin() {
                     <CardDescription className="text-center">Enter your ID and password to access your account</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <form onSubmit={handleSubmit((data) => handleLogin(data))}>
                     {error && <div className="text-red-600 text-center">{error}</div>} {/* Error message */}
                     <div className="space-y-2">
                         <Label htmlFor="ID">ID</Label>
                         <Input 
                             id="ID" 
                             type="text" 
-                            placeholder="123456789" 
-                            value={ID} 
-                            onChange={(e) => setID(e.target.value)} 
+                            placeholder="123456789"
+                            {...register("id", {required: true})}
                             required 
                         />
                     </div>
@@ -52,18 +82,16 @@ export function StaffLogin() {
                         <Input 
                             id="password" 
                             type="password" 
-                            placeholder="123456789" 
-                            value={password} 
-                            onChange={(e) => setPassword(e.target.value)} 
+                            placeholder="123456789"
+                            {...register("password", {required: true})}
                             required 
                         />
                     </div>
+                            <Button disabled={disabled} className="w-full mt-5" type="submit">
+                                Login
+                            </Button>
+                    </form>
                 </CardContent>
-                <CardFooter className="flex flex-col space-y-4">
-                    <Button className="w-full" onClick={handleLogin}>
-                        Login
-                    </Button>
-                </CardFooter>
             </Card>
         </div>
     )

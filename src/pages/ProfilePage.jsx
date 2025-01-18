@@ -1,52 +1,24 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Home, Calendar, MessageSquare, User, Mail, Phone, MapPin } from 'lucide-react'
+
+import { Mail, Phone, MapPin } from 'lucide-react'
+import {Navbar} from "@/components/Navbar.jsx";
+import {useAuth} from "@/contexts/AuthContext.js";
+import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar.jsx";
 
 export default function ProfilePage() {
-
+  const { userQuery } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-gray-50/50">
-      <aside className="w-64 p-6 bg-white border-r">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold">David Smith</h2>
-          <p className="text-sm text-muted-foreground">Male</p>
-          <p className="text-sm text-muted-foreground">35 years old</p>
-        </div>
-        <nav className="space-y-2">
-          <a 
-            href="/dashboard" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </a>
-          <a 
-            href="/appointment" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <Calendar className="w-4 h-4" />
-            Appointments
-          </a>
-          <a 
-            href="/messages" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Messages
-          </a>
-          <a 
-            href="/profilepage" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg bg-gray-100"
-          >
-            <User className="w-4 h-4" />
-            Profile
-          </a>
-        </nav>
-      </aside>
+      <Navbar />
 
       <main className="flex-1 p-8">
-        <h1 className="text-2xl font-bold mb-8">My Profile</h1>
+        <div className="flex items-center pb-7">
+          <Avatar className="h-12 w-12 mr-5">
+            <AvatarImage src="/placeholder.svg" alt={`${userQuery.data?.firstName} ${userQuery.data?.lastName}`} />
+            <AvatarFallback>{`${userQuery.data?.firstName.slice(0, 1)}${userQuery.data?.lastName.slice(0, 1)}`}</AvatarFallback>
+          </Avatar>
+          <h1 className="text-2xl font-bold">{userQuery.data?.firstName} {userQuery.data?.lastName} - My Profile</h1>
+        </div>
         <div className="grid gap-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -54,7 +26,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-sm font-medium">Email</p>
-              <p className="text-sm text-muted-foreground">davidsmith@gmail.com</p>
+              <p className="text-sm text-muted-foreground">{userQuery.data?.email}</p>
             </div>
           </div>
 
@@ -64,7 +36,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-sm font-medium">Phone</p>
-              <p className="text-sm text-muted-foreground">+44 12345 6789</p>
+              <p className="text-sm text-muted-foreground">{userQuery.data?.phone ?? "No phone added"}</p>
             </div>
           </div>
 
@@ -74,40 +46,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium">Address</p>
-              <p className="text-sm text-muted-foreground">No address added</p>
-            </div>
-            <Button variant="outline" size="sm">Add</Button>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Healthcare Records</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src="/placeholder.svg" alt="Dr. John Smith" />
-                <AvatarFallback>JS</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">Dr. John Smith</p>
-                <p className="text-sm text-muted-foreground">General Practitioner</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Upcoming Appointments</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src="/placeholder.svg" alt="Dr. Jane Doe" />
-                <AvatarFallback>JS</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">Dr. John Smith</p>
-                <p className="text-sm text-muted-foreground">Wednesday, January 8th, 2025 at 2:00pm.</p>
-              </div>
+              <p className="text-sm text-muted-foreground">{userQuery.data?.address ?? "No address added"}</p>
             </div>
           </div>
         </div>

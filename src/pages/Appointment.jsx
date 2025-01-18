@@ -4,10 +4,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Textarea } from '@/components/ui/textarea'
 import { format } from 'date-fns'
-import { Home, Calendar1, MessageSquare, User } from 'lucide-react'
-
+import {Navbar} from "@/components/Navbar.jsx";
+import {useQuery} from "react-query";
+import {getUsers} from "@/api/user.js";
+import {useAuth} from "@/contexts/AuthContext.js";
+import {createAppointment} from "@/api/appointment.js";
+import {useNavigate} from "react-router-dom";
+import {createMessage} from "@/api/message.js";
 
 export default function Appointment() {
   const [date, setDate] = useState(new Date())
@@ -15,70 +19,53 @@ export default function Appointment() {
   const [selectedTime, setSelectedTime] = useState("")
   const [confirmationMessage, setConfirmationMessage] = useState("")
 
+  const {token, userQuery} = useAuth();
+  const navigate = useNavigate();
 
-  const doctors = {
-    "dr-maple": "Dr. Maple",
-    "dr-brown": "Dr. Brown",
-    "dr-smith": "Dr. Smith"
-  }
+  const doctorQuery = useQuery({
+    queryKey: ['doctors'],
+    queryFn: () => getUsers(token),
+  });
+
+  const doctors = doctorQuery.data?.filter(d => d.healthcareRole === 'doctor').map((doctor) => { return { value: doctor.id, label: `Dr. ${doctor.lastName}`} })
+
+  const regularTimes = ["09:00", "10:00", "11:00", "01:00", "02:00", "03:00", "04:00"]
+
+  // const sameDayappointments = appointments.data?.filter(a => a.date === new Intl.DateTimeFormat('en-CA', {
+  //   year: 'numeric',
+  //   month: '2-digit',
+  //   day: '2-digit',
+  // }).format(new Date(date)) && a.doctor.id === selectedDoctor.value)
 
   useEffect(() => {
     if (date && selectedDoctor && selectedTime) {
       setConfirmationMessage(
-        `You are booking an appointment for ${format(date, 'MMMM d, yyyy')} at ${selectedTime} with ${doctors[selectedDoctor]}.`
+        `You are booking an appointment for ${format(date, 'MMMM d, yyyy')} at ${selectedTime} with ${doctors.find(d => d.value === selectedDoctor).label}.`
       )
     } else {
       setConfirmationMessage("")
     }
   }, [date, doctors, selectedDoctor, selectedTime])
 
-  const handleBooking = () => {
-    console.log("Booking appointment for:", { date, selectedDoctor, selectedTime })
-    // Here you would typically send this data to your backend
+  const handleBooking = async () => {
     alert("Appointment booked successfully!")
-  }
 
+    let newAppointment = {
+      date: date,
+      time: `${selectedTime}:00`,
+      doctor: selectedDoctor,
+      patient: userQuery.data?.id,
+      appointmentStatus: 'Upcoming'
+    };
+
+    const response= await createAppointment(token, newAppointment);
+    await createMessage(token, { type: 'confirmed', appointment: response.documentId, user: userQuery.data?.id })
+    navigate('/dashboard');
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50/50">
-      <aside className="w-64 p-6 bg-white border-r flex flex-col">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold">David Smith</h2>
-          <p className="text-sm text-muted-foreground">Male</p>
-          <p className="text-sm text-muted-foreground">35 years old</p>
-        </div>
-        <nav className="space-y-2 flex-grow">
-          <a 
-            href="/dashboard" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </a>
-          <a 
-            href="/appointment" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg bg-gray-100"
-          >
-            <Calendar1 className="w-4 h-4" />
-            Appointments
-          </a>
-          <a 
-            href="/messages" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Messages
-          </a>
-          <a 
-            href="/profilepage" 
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100"
-          >
-            <User className="w-4 h-4" />
-            Profile
-          </a>
-        </nav>
-      </aside>
-
+      <Navbar/>
       <main className="container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Book A New Appointment</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -109,9 +96,9 @@ export default function Appointment() {
                     <SelectValue placeholder="Select a doctor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dr-smith">Dr. Smith</SelectItem>
-                    <SelectItem value="dr-brown">Dr. Brown</SelectItem>
-                    <SelectItem value="dr-maple">Dr. Maple</SelectItem>
+                    {doctors?.map(doctor =>
+                      <SelectItem key={doctor.value} value={doctor.value}>{doctor.label}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -122,18 +109,11 @@ export default function Appointment() {
                     <SelectValue placeholder="Select a time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="09:00">09:00 AM</SelectItem>
-                    <SelectItem value="10:00">10:00 AM</SelectItem>
-                    <SelectItem value="11:00">11:00 AM</SelectItem>
-                    <SelectItem value="14:00">02:00 PM</SelectItem>
-                    <SelectItem value="15:00">03:00 PM</SelectItem>
-                    <SelectItem value="16:00">04:00 PM</SelectItem>
+                    {regularTimes.map(time =>
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="details">Details</Label>
-                <Textarea id="details" placeholder="Enter your request here." className="focus:placeholder-transparent"></Textarea>
               </div>
               {confirmationMessage && (
                 <div className="mt-4 p-4 bg-gray-100 text-black rounded-md" role="alert">

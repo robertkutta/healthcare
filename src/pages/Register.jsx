@@ -5,18 +5,26 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useNavigate } from 'react-router-dom'
+import {registerAccount, updateAccount} from "@/api/user.js";
+import {useAuth} from "@/contexts/AuthContext.js";
+import {useQueryClient} from "react-query";
 
 export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [day, setDay] = useState('')
   const [month, setMonth] = useState('')
   const [year, setYear] = useState('')
   const [gender, setGender] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
   const [errors, setErrors] = useState({})
-  const router = useNavigate()
+  const navigate = useNavigate()
+  const {setToken} = useAuth();
+  const queryClient = useQueryClient();
 
   const calculateAge = (year, month, day) => {
     const today = new Date()
@@ -38,8 +46,9 @@ export default function Register() {
     const newErrors = {}
     const age = calculateAge(parseInt(year), parseInt(month), parseInt(day))
 
-    if (!name) newErrors.name = "Name is required"
     if (!email) newErrors.email = "Email is required"
+    if (!address) newErrors.address = "Address is required"
+    if (!phone) newErrors.phone = "Phone is required"
     if (!password) {
       newErrors.password = "Password is required"
     } else if (!isPasswordValid(password)) {
@@ -67,13 +76,28 @@ export default function Register() {
       return
     }
     const age = calculateAge(parseInt(year), parseInt(month), parseInt(day))
-    console.log('Registering with:', { name, email, password, dateOfBirth: `${year}-${month}-${day}`, gender, age })
-    router.push('/dashboard')
+
+    const res = await registerAccount({ username: email, email, password})
+    await updateAccount(res.jwt, res.user.id, {
+      age,
+      firstName,
+      lastName,
+      gender,
+      phone,
+      address,
+      healthcareRole: 'patient'
+    })
+
+    sessionStorage.setItem("token", res.jwt);
+    setToken(res.jwt);
+
+    navigate('/dashboard')
+    await queryClient.invalidateQueries({queryKey: ['user']});
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-[350px]">
+    <div className="flex items-center justify-center h-full bg-background pt-5">
+      <Card className="w-[500px]">
         <CardHeader>
           <CardTitle>Register</CardTitle>
           <CardDescription>Create a new account to get started</CardDescription>
@@ -82,19 +106,26 @@ export default function Register() {
           <form onSubmit={handleSubmit}>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="name">Name</Label>
-                <Input 
-                  id="name" 
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                {errors.name && <span className="text-red-500 text-sm">{errors.name}</span>}
+                <Label>Full name</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="First name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+                {errors.firstName && <span className="text-red-500 text-sm">{errors.firstName}</span>}
+                {errors.lastName && <span className="text-red-500 text-sm">{errors.lastName}</span>}
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
+                <Input
+                  id="email"
                   type="email"
                   placeholder="Enter your email"
                   value={email}
@@ -104,8 +135,8 @@ export default function Register() {
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
+                <Input
+                  id="password"
                   type="password"
                   placeholder="Enter your password"
                   value={password}
@@ -115,8 +146,8 @@ export default function Register() {
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input 
-                  id="confirmPassword" 
+                <Input
+                  id="confirmPassword"
                   type="password"
                   placeholder="Confirm your password"
                   value={confirmPassword}
@@ -128,19 +159,19 @@ export default function Register() {
               <div className="flex flex-col space-y-1.5">
                 <Label>Date of Birth</Label>
                 <div className="flex space-x-2">
-                  <Input 
+                  <Input
                     placeholder="DD"
                     value={day}
                     onChange={(e) => setDay(e.target.value)}
                     maxLength={2}
                   />
-                  <Input 
+                  <Input
                     placeholder="MM"
                     value={month}
                     onChange={(e) => setMonth(e.target.value)}
                     maxLength={2}
                   />
-                  <Input 
+                  <Input
                     placeholder="YYYY"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
@@ -150,24 +181,42 @@ export default function Register() {
                 {errors.dob && <span className="text-red-500 text-sm">{errors.dob}</span>}
               </div>
               <div className="flex flex-col space-y-1.5">
+                <Label>Address</Label>
+                <Input
+                  placeholder="25 Liberty Street, etc"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+                {errors.address && <span className="text-red-500 text-sm">{errors.address}</span>}
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <Label>Phone</Label>
+                <Input
+                  placeholder="+44 123456789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                {errors.address && <span className="text-red-500 text-sm">{errors.address}</span>}
+              </div>
+              <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="gender">Gender</Label>
                 <Select onValueChange={setGender} value={gender}>
                   <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select your gender" />
+                    <SelectValue placeholder="Select your gender"/>
                   </SelectTrigger>
                   <SelectContent position="popper">
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.sex && <span className="text-red-500 text-sm">{errors.sex}</span>}
+                {errors.gender && <span className="text-red-500 text-sm">{errors.gender}</span>}
               </div>
             </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => router.push('/login')}>Cancel</Button>
+          <Button variant="outline" onClick={() => navigate('/')}>Cancel</Button>
           <Button onClick={handleSubmit}>Register</Button>
         </CardFooter>
       </Card>
