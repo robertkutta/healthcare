@@ -9,7 +9,7 @@ import {useAuth} from "@/contexts/AuthContext.js";
 import {useMutation, useQueryClient} from "react-query";
 import {loginAccount} from "@/api/user.js";
 
-export function StaffLogin() {
+function StaffLogin() {
     const {register, handleSubmit, formState: {errors}} = useForm();
     const [error, setError] = useState("")
     const navigate = useNavigate()
@@ -96,3 +96,5 @@ export function StaffLogin() {
         </div>
     )
 }
+
+export default StaffLogin
